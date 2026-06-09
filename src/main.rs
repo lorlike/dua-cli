@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use byte_unit::Byte;
 use filesize::PathExt;
+use owo_colors::OwoColorize;
 use std::{
     collections::HashSet,
     env, fs,
@@ -12,6 +13,7 @@ use std::{
 struct Item {
     size: u64,
     name: String,
+    is_dir: bool,
 }
 #[derive(Default)]
 struct InodeFilter {
@@ -42,23 +44,39 @@ fn main() -> Result<()> {
         items.push(Item {
             size,
             name: filename.to_string(),
+            is_dir: dir.is_dir(),
         });
     }
-    // sort and output
+    output_with_color(items);
+    Ok(())
+}
+
+// sort and output with colors
+fn output_with_color(mut items: Vec<Item>) {
+    let mut total_size = 0u64;
     items.sort();
     for item in items {
         let Item {
             size,
             name: filename,
+            is_dir,
         } = item;
+        total_size += size;
         let size = Byte::from_u64(size).get_appropriate_unit(byte_unit::UnitType::Binary);
         let size = format!("{size:.2}");
         let width = 10;
-        println!(" {:>width$} {}", size, filename);
+        if is_dir {
+            let filename = filename.cyan();
+            println!(" {:>width$} {}", size.green(), filename);
+        } else {
+            println!(" {:>width$} {}", size.green(), filename);
+        }
     }
-    Ok(())
+    let size = Byte::from_u64(total_size).get_appropriate_unit(byte_unit::UnitType::Binary);
+    let size = format!("{size:.2}");
+    let width = 10;
+    println!(" {:>width$} total", size.green());
 }
-
 // 获取指定目录的子条目数组
 fn get_path_list(path: &str) -> Result<Vec<PathBuf>> {
     let mut dir_list = Vec::new();
